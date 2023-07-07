@@ -2,7 +2,7 @@ import sys
 from threading import Thread
 import requests
 from PyQt6.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QLabel, QGridLayout, QMessageBox, \
-    QVBoxLayout, QTextEdit, QListWidget, QTableWidget, QTableWidgetItem
+    QVBoxLayout, QTextEdit, QListWidget, QTableWidget, QTableWidgetItem, QFileDialog, QCheckBox
 from PyQt6 import uic
 import json
 import spotipy
@@ -29,9 +29,18 @@ class Beatify(QWidget):
     def __init__(self):
         super().__init__()
         uic.loadUi("first.ui", self)
-        print("Successfully loaded UI")
+        self.output.hide()
+        self.warning.hide()
+        self.output.append("Successfully loaded UI")
         self.startConverting.clicked.connect(self.convert_playlist)
         self.urlInput.editingFinished.connect(self.fetch_playlist_infos)
+        self.togglLog.stateChanged.connect(self.toggl_log)
+
+    def toggl_log(self):
+        if self.togglLog.isChecked():
+            self.output.show()
+        else:
+            self.output.hide()
 
     def fetch_playlist_infos(self):
         try:
@@ -39,42 +48,48 @@ class Beatify(QWidget):
             self.displayPlaylistInfo.setText(
                 "Playlist " + results['name'] + " by " + results['owner']['display_name'] + " with " + str(
                     results['tracks']['total']) + " songs")
+            if results['tracks']['total'] > 100:
+                self.warning.show()
+            else:
+                self.warning.hide()
         except spotipy.exceptions.SpotifyException:
             self.displayPlaylistInfo.setText("URL is not valid")
+            self.warning.hide()
 
     def convert_playlist(self):
-        print("Converting Playlist...")
+        self.output.append("Converting Playlist...")
         song_url = self.urlInput.text()
         self.displaySongs.setRowCount(0)
         try:
             results = spotify.playlist_items(song_url)
+            #self.process_songs(results)
             Thread(target=self.process_songs, args=[results]).start()
-            print("Started Thread")
+            self.output.append("Started Thread")
         except spotipy.exceptions.SpotifyException:
-            print("URL is not a valid Spotify Playlist URL")
+            self.output.append("URL is not a valid Spotify Playlist URL")
             return
 
     def process_songs(self, results):
         results = results['items']
         i = 0
         while i < len(results):
-            print(str(i))
+            self.output.append(str(i))
             results_track = results[i]['track']
             self.scrap_song_infos(data=results_track)
             i = i + 1
 
-        print("Finished converting Playlist")
+        self.output.append("Finished converting Playlist")
         playlist_json = json.dumps(playlist)
-        print(str(playlist_json))
+        self.output.append(str(playlist_json))
         file = open("./tmp.json", "w")
         file.write(playlist_json)
-        print("Saved Playlist to tmp.json")
+        self.output.append("Saved Playlist to tmp.json")
 
     def scrap_song_infos(self, data):
         song_name = data["name"]
         song_artist = data["artists"][0]["name"]
         song_duration = int(data["duration_ms"] / 1000)
-        print(str(song_name + " by " + song_artist + " with the duration of " + str(song_duration) + "s"))
+        self.output.append(str(song_name + " by " + song_artist + " with the duration of " + str(song_duration) + "s"))
         self.search_song(song_name, song_artist, song_duration)
 
     def search_song(self, song_name, song_artist, duration):
@@ -84,7 +99,7 @@ class Beatify(QWidget):
         }
 
         response = requests.get("https://api.beatsaver.com/search/text/0", parameters)
-        print(str(response.url))
+        self.output.append(str(response.url))
         if response.status_code == 200:
             json_response_array = json.loads(response.text)
             json_response_array = json_response_array["docs"]
@@ -92,16 +107,16 @@ class Beatify(QWidget):
             while len(json_response_array) > json_response_current_number:
                 json_response = json_response_array[json_response_current_number]
                 if song_name.lower() not in json_response["name"].lower():
-                    print("No the same title. The Title of the song is: " + str(json_response["name"]))
+                    self.output.append("No the same title. The Title of the song is: " + str(json_response["name"]))
                 else:
                     song_id = json_response["id"]
                     song_beatsaver_name = json_response["name"]
                     song_hash = json_response["versions"][0]["hash"]
                     json_response = json_response["metadata"]
                     if json_response["duration"] in range(duration - 10, duration + 10):
-                        print(str(f"Found a song with the id: {song_id} and the name " + json_response[
+                        self.output.append(str(f"Found a song with the id: {song_id} and the name " + json_response[
                             "songName"] + " the URL is: https://beatsaver.com/maps/" + song_id))
-                        print(str("The hash is: " + song_hash))
+                        self.output.append(str("The hash is: " + song_hash))
                         song_par = {"key": song_id, "hash": song_hash}
                         song_list.insert(len(song_list), song_par)
                         playlist["songs"] = song_list
@@ -112,14 +127,15 @@ class Beatify(QWidget):
                         self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 2, QTableWidgetItem(song_name))
                         self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 3, QTableWidgetItem(song_beatsaver_name))
                         self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 4, QTableWidgetItem(song_id))
+                        self.displaySongs.resizeColumnsToContents()
 
                         return
 
                     else:
-                        print("A song was found, but probably not match the one from Spotify.")
-                        print("Spotify: " + song_name + " with the duration of " + str(
+                        self.output.append("A song was found, but probably not match the one from Spotify.")
+                        self.output.append("Spotify: " + song_name + " with the duration of " + str(
                             duration) + "s" " and the URL is: https://beatsaver.com/maps/" + song_id)
-                        print("Beatsaver: " + json_response["songName"] + " with the duration of " + str(
+                        self.output.append("Beatsaver: " + json_response["songName"] + " with the duration of " + str(
                             json_response["duration"]) + "s")
                 json_response_current_number = json_response_current_number + 1
 
@@ -127,6 +143,7 @@ class Beatify(QWidget):
             self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 0, QTableWidgetItem("Found no Beatmap"))
             self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 1, QTableWidgetItem(song_artist))
             self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 2, QTableWidgetItem(song_name))
+            self.displaySongs.resizeColumnsToContents()
 
 
 app = QApplication([])
