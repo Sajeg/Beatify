@@ -40,7 +40,7 @@ def detect_folder():
 class Beatify(QWidget):
     def __init__(self):
         super().__init__()
-        uic.loadUi("first.ui", self)
+        uic.loadUi("gui.ui", self)
 
         self.warning.hide()
         self.displaySongs.setHorizontalHeaderLabels(
