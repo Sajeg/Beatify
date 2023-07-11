@@ -1,15 +1,15 @@
+import json
 import os
 import sys
-import json
-import spotipy
-import requests
-
-from PyQt6 import uic
-from fuzzywuzzy import fuzz
+import webbrowser
 from threading import Thread
+
+import requests
+import spotipy
+from PyQt6 import uic
 from PyQt6.QtGui import QColor
-from spotipy.oauth2 import SpotifyClientCredentials
 from PyQt6.QtWidgets import QApplication, QWidget, QTableWidgetItem
+from spotipy.oauth2 import SpotifyClientCredentials
 
 file = open("./credentials.json", "r")
 credentials = json.load(file)
@@ -28,28 +28,30 @@ playlist = {
 song_list = []
 
 
+def detect_folder():
+    if os.path.isfile("C:\Program Files (x86)\Steam\steamapps\common\Beat Saber/Beat Saber.exe"):
+        return "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber"
+    elif os.path.isfile("C:\Program Files\Oculus\Software\Software\hyperbolic-magnetism-beat-saber\/Beat Saber.exe"):
+        return "C:\Program Files\Oculus\Software\Software\hyperbolic-magnetism-beat-saber"
+    else:
+        print("Couldn't detect automatically the beat saber folder")
+
+
 class Beatify(QWidget):
     def __init__(self):
         super().__init__()
         uic.loadUi("first.ui", self)
 
-        self.output.hide()
         self.warning.hide()
         self.displaySongs.setHorizontalHeaderLabels(
             ["Playlist", "Status", "Artist", "Spotify Name", "BeatSaver Name", "BeatSaver ID"])
         print("Successfully loaded UI")
+        self.installDir.setText(detect_folder())
 
         self.startConverting.clicked.connect(self.convert_playlist)
         self.urlInput.editingFinished.connect(self.fetch_playlist_infos)
-        self.togglLog.stateChanged.connect(self.toggl_log)
         self.savePlaylist.clicked.connect(self.save_playlist)
         self.displaySongs.cellClicked.connect(self.toggl_playlist)
-
-    def toggl_log(self):
-        if self.togglLog.isChecked():
-            self.output.show()
-        else:
-            self.output.hide()
 
     def fetch_playlist_infos(self):
         try:
@@ -61,7 +63,7 @@ class Beatify(QWidget):
 
             self.playlistDescription.setText(results['description'])
             self.playlistName.setText(results['name'])
-            playlist['playlistAuthor'] = results['owner']['display_name']
+            self.playlistAuthor.setText(results['owner']['display_name'])
 
             if results['tracks']['total'] > 100:
                 self.warning.show()
@@ -100,9 +102,11 @@ class Beatify(QWidget):
 
     def save_playlist(self):
         print("Saving Playlist...")
+        self.savePlaylist.setEnabled(False)
+        self.status.setText("Saving Playlist...")
 
-        playlist_name = self.playlistDescription.text()
-        playlist_description = self.playlistName.text()
+        playlist_name = self.playlistName.text()
+        playlist_description = self.playlistDescription.text()
         beatsaber_folder = self.installDir.text()
 
         playlist['playlistTitle'] = playlist_name
@@ -113,25 +117,26 @@ class Beatify(QWidget):
             background_color = self.displaySongs.item(row, 0).background().color()
 
             if background_color == QColor("green"):
-                playlist['songs'].append(song)
+                if song['key'] == self.displaySongs.item(row, 5).text():
+                    playlist['songs'].append(song)
             else:
                 print(f"Song {song['key']} is not green")
 
         print(playlist)
-
         playlist_name = playlist_name.replace(" ", "_")
         playlist_json = json.dumps(playlist)
-        playlist_file = open(f"./{playlist_name}.json", "w")
-        playlist_file.write(playlist_json)
-        print(f"Saved Playlist to {playlist_name}.json")
 
         if os.path.isfile(beatsaber_folder + "/Beat Saber.exe"):
             print("Found Beat Saber Folder")
             playlist_file = open(f"{beatsaber_folder}/Playlists/{playlist_name}.json", "w")
             playlist_file.write(playlist_json)
         else:
+            self.status.setText("Beat Saber Folder not found")
             print("The Folder does not seem to be the Beat Saber installation folder")
 
+        self.status.setText("Saved Playlist")
+        self.savePlaylist.setEnabled(True)
+        print(f"Saved Playlist to {beatsaber_folder}/Playlists/{playlist_name}.json")
 
     def search_table(self, search_text):
         for row in range(self.displaySongs.rowCount()):
@@ -162,6 +167,7 @@ class Beatify(QWidget):
             else:
                 return
 
+        sorted_songs = []
         json_response_array = json.loads(response.text)
         json_response_array = json_response_array["docs"]
         json_response_current_number = 0
@@ -172,7 +178,7 @@ class Beatify(QWidget):
             # if (fuzz.ratio(song_name.lower(), json_response["name"].lower())) < 80:
             if song_name.lower() not in json_response["name"].lower():
                 print(
-                    f"No the same title. The Title of the song is: {str(json_response['name'])} matching percentage: {fuzz.ratio(song_name.lower(), json_response['name'].lower())}")
+                    f"Not the same title. The Title of the BeatSaver song is: {str(json_response['name'])}")
 
             else:
                 song_id = json_response["id"]
@@ -204,6 +210,9 @@ class Beatify(QWidget):
                     return
 
                 else:
+                    song_par = {"key": song_id, "hash": song_hash, "duration": json_response["duration"],
+                                "name": json_response["songName"]}
+                    sorted_songs.insert(len(song_list), song_par)
                     print("A song was found, but probably not match the one from Spotify.")
                     print(f"Spotify: {song_name} with the duration of {duration}s.")
                     print(
@@ -213,13 +222,28 @@ class Beatify(QWidget):
 
         self.displaySongs.insertRow(self.displaySongs.rowCount())
         self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 0, QTableWidgetItem(""))
-        self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 1, QTableWidgetItem("Found no Beatmap"))
+
+        if len(sorted_songs) > 0:
+            song_par = {"key": sorted_songs[0]['key'], "hash": sorted_songs[0]['hash']}
+            song_list.insert(len(song_list), song_par)
+
+            self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 1,
+                                      QTableWidgetItem("Found probably no Beatmap"))
+            self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 4, QTableWidgetItem(sorted_songs[0]["name"]))
+            self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 5, QTableWidgetItem(sorted_songs[0]["key"]))
+            self.displaySongs.item(self.displaySongs.rowCount() - 1, 1).setBackground(QColor("#ffff80"))
+        else:
+            # song_par = {"key": "", "hash": ""}
+            # song_list.insert(len(song_list), song_par)
+            self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 1,
+                                      QTableWidgetItem("Found no Beatmap"))
+            self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 4, QTableWidgetItem(""))
+            self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 5, QTableWidgetItem(""))
+            self.displaySongs.item(self.displaySongs.rowCount() - 1, 1).setBackground(QColor("#ff474c"))
+
         self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 2, QTableWidgetItem(song_artist))
         self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 3, QTableWidgetItem(song_name))
-        self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 4, QTableWidgetItem(""))
-        self.displaySongs.setItem(self.displaySongs.rowCount() - 1, 5, QTableWidgetItem(""))
         self.displaySongs.item(self.displaySongs.rowCount() - 1, 0).setBackground(QColor("red"))
-        self.displaySongs.item(self.displaySongs.rowCount() - 1, 1).setBackground(QColor("#ff474c"))
         self.displaySongs.resizeColumnsToContents()
 
     def toggl_playlist(self, row, column):
@@ -232,6 +256,9 @@ class Beatify(QWidget):
                 new_color = QColor("red")
 
             self.displaySongs.item(row, column).setBackground(new_color)
+        elif column == 5:
+            print("Opening BeatSaver")
+            webbrowser.open("https://beatsaver.com/maps/" + self.displaySongs.item(row, column).text())
 
 
 app = QApplication([])
