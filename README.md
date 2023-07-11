@@ -2,8 +2,8 @@
  A Spotify2BeatSaber Playlist Converter
 
 # Installation
-You can find a step-by-step tutorial on YouTube (soon)
-1. Download the .exe file from releases. (soon)
+You can find a step-by-step tutorial on [YouTube](https://youtu.be/jNsbox5lHG4)
+1. Download the .zip file from releases and extract it. (soon)
 2. run it
 3. Now you can enter the URL of your Spotify Playlist
 4. Then Click on "Convert Playlist"
@@ -13,10 +13,11 @@ You can find a step-by-step tutorial on YouTube (soon)
 7. The click on "Save the Playlist Button" and it should be automaticlly installed in the Beat Saber folder
 
 # Set Up for development
-The requirements are in [requirements.txt](https://github.com/Sajeg/Beatify/blob/main/requirements.txt) but you also need a file `Credentials.json` placed in the root of the Project with:
+The requirements are in [requirements.txt](https://github.com/Sajeg/Beatify/blob/main/requirements.txt) but you also need a file `credentials.json` placed in the root of the Project with:
 
 `{"SPOTIPY_CLIENT_SECRET" : "Your Spotify Client Secret", "SPOTIPY_CLIENT_ID" : "Your Spotify Client ID"}`
 You get these by creating an app on [Spotify Developers](https://developer.spotify.com/dashboard/create).
 
 # Legal
-I am in no connection with Spotify nor with Beat games.
+- I am in no connection with Spotify nor with Beat games.
+- The Font in the Logo is Shadows Into Light by Kimberly Geswein
