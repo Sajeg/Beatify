@@ -100,7 +100,7 @@
     <item>
      <widget class="QLabel" name="info">
       <property name="text">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tips:&lt;/p&gt;&lt;p&gt;- You can Click on the Playlist column to check if this song is included in the playlist.&lt;/p&gt;&lt;p&gt;- Sometimes the program crashes, just restart it&lt;/p&gt;&lt;p&gt;- When it takes too long to display the next Song, it is probably because of the Beat Saver Website&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tips:&lt;/p&gt;&lt;p&gt;- You can Click on the Playlist column to check if this song is included in the playlist.&lt;/p&gt;&lt;p&gt;- You can open the Beat Saver website by clicking on the ID in the last column&lt;/p&gt;&lt;p&gt;- When it takes too long to display the next Song, it is probably because of the Beat Saver Website&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
