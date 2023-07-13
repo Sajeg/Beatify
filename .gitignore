@@ -1,4 +1,7 @@
 *.json
 .idea/
 venv/
+build/
+dist/
 .cache
+*.spec
