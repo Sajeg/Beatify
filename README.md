@@ -2,8 +2,7 @@
  A Spotify2BeatSaber Playlist Converter
 
 # Installation
-You can find a step-by-step tutorial on [YouTube](https://youtu.be/jNsbox5lHG4)
-1. Download the .zip file from releases and extract it. (soon)
+1. Download the .zip file from releases and extract it.
 2. run it
 3. Now you can enter the URL of your Spotify Playlist
 4. Then Click on "Convert Playlist"
